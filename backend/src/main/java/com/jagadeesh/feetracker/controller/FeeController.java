@@ -1,5 +1,7 @@
 package com.jagadeesh.feetracker.controller;
 
+import com.jagadeesh.feetracker.dto.BulkFeeRequest;
+import com.jagadeesh.feetracker.dto.BulkFeeResult;
 import com.jagadeesh.feetracker.dto.FeeResponse;
 import com.jagadeesh.feetracker.dto.PaymentRequest;
 import com.jagadeesh.feetracker.dto.PaymentResponse;
@@ -27,6 +29,13 @@ public class FeeController {
 
     public FeeController(FeeService feeService) {
         this.feeService = feeService;
+    }
+
+    @PostMapping("/bulk")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasRole('ADMIN')")
+    public BulkFeeResult assignToClass(@Valid @RequestBody BulkFeeRequest req) {
+        return feeService.assignToClass(req);
     }
 
     @GetMapping("/overdue")
