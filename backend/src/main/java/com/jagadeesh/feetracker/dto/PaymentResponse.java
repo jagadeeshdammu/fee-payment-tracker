@@ -7,10 +7,13 @@ import java.time.LocalDate;
 
 public record PaymentResponse(
         Long id,
+        String receiptNo,
         Long feeId,
         String feeTitle,
         Long studentId,
         String studentName,
+        String admissionNo,
+        String className,
         BigDecimal amount,
         PaymentMode mode,
         String reference,

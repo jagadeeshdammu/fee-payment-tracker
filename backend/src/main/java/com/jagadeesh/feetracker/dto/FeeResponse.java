@@ -10,6 +10,8 @@ public record FeeResponse(
         Long studentId,
         String studentName,
         String className,
+        String parentName,
+        String parentPhone,
         String title,
         BigDecimal amount,
         BigDecimal paidAmount,

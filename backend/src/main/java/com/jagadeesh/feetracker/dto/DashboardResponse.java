@@ -10,6 +10,9 @@ public record DashboardResponse(
         BigDecimal totalOutstanding,
         BigDecimal collectedThisMonth,
         long overdueCount,
+        BigDecimal overdueAmount,
         List<ClassSummary> byClass,
+        List<MonthlyCollection> monthly,
+        List<ModeSummary> byMode,
         List<PaymentResponse> recentPayments) {
 }
