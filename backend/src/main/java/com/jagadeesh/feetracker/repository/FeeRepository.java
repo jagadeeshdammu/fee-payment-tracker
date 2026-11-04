@@ -26,6 +26,9 @@ public interface FeeRepository extends JpaRepository<Fee, Long> {
     @Query("select count(f) from Fee f where f.dueDate < :today and f.paidAmount < f.amount")
     long countOverdue(@Param("today") LocalDate today);
 
+    @Query("select coalesce(sum(f.amount - f.paidAmount), cast(0 as BigDecimal)) from Fee f where f.dueDate < :today and f.paidAmount < f.amount")
+    BigDecimal overdueAmount(@Param("today") LocalDate today);
+
     @Query("select coalesce(sum(f.amount), cast(0 as BigDecimal)) from Fee f")
     BigDecimal totalBilled();
 

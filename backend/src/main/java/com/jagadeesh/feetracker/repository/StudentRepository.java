@@ -11,6 +11,8 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
 
     boolean existsByAdmissionNo(String admissionNo);
 
+    List<Student> findByClassNameOrderByName(String className);
+
     @Query("""
             select s from Student s
             where (:q = '' or lower(s.name) like lower(concat('%', :q, '%'))
