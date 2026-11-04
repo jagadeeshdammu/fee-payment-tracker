@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import {
-  ApiError, Dashboard, Fee, FeeRequest, Payment, PaymentRequest, Student, StudentDetail, StudentRequest,
+  ApiError, BulkFeeRequest, BulkFeeResult, Dashboard, Fee, FeeRequest, Payment, PaymentRequest, Student, StudentDetail, StudentRequest,
 } from './models';
 
 /** Typed wrapper around the REST API. */
@@ -51,6 +51,18 @@ export class ApiService {
 
   recordPayment(feeId: number, body: PaymentRequest): Observable<Payment> {
     return this.http.post<Payment>(`${this.base}/fees/${feeId}/payments`, body);
+  }
+
+  ledger(q = '', mode = '', from = '', to = ''): Observable<Payment[]> {
+    let params = new HttpParams().set('q', q);
+    if (mode) params = params.set('mode', mode);
+    if (from) params = params.set('from', from);
+    if (to) params = params.set('to', to);
+    return this.http.get<Payment[]>(`${this.base}/payments`, { params });
+  }
+
+  bulkFee(body: BulkFeeRequest): Observable<BulkFeeResult> {
+    return this.http.post<BulkFeeResult>(`${this.base}/fees/bulk`, body);
   }
 }
 
