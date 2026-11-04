@@ -1,8 +1,10 @@
-# FeeTrack · School Fee Payment Tracker
+# Ledgr · School Fee Payment Tracker
 
 [![CI](https://github.com/jagadeeshdammu/fee-payment-tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/jagadeeshdammu/fee-payment-tracker/actions/workflows/ci.yml)
 
-A full-stack app for schools to manage student fees: add fees, record payments (UPI, card, net banking, cash, cheque), follow up on overdue balances and see collections by class.
+A full-stack app for schools to manage student fees: bill fees (to one student or a whole class), record payments (UPI, card, net banking, cash, cheque), print receipts, chase overdue balances on WhatsApp and see where every rupee came from.
+
+![Ledgr dashboard](docs/dashboard.png)
 
 **Live demo:** https://jagadeeshdammu.github.io/fee-payment-tracker/
 Log in as `admin / admin123` or `accountant / accountant123`.
@@ -12,7 +14,7 @@ Log in as `admin / admin123` or `accountant / accountant123`.
 
 | Layer | Tech |
 |---|---|
-| Frontend | Angular 19 · standalone components · Signals · Reactive Forms · RxJS · functional HTTP interceptors and route guards · lazy-loaded routes |
+| Frontend | Angular 19 · standalone components · Signals · Reactive Forms · RxJS · functional HTTP interceptors and route guards · lazy-loaded routes · GSAP 3 animations · hand-built SVG charts (no chart library) |
 | Backend | Java 17 · Spring Boot 3.3 · Spring Security 6 · JWT (jjwt) · Spring Data JPA / Hibernate · Bean Validation |
 | Database | MySQL 8 · Flyway versioned migrations · H2 for tests |
 | DevOps | Docker multi-stage builds · Docker Compose · nginx · GitHub Actions CI (Maven tests + Angular build) · GitHub Pages |
@@ -20,10 +22,12 @@ Log in as `admin / admin123` or `accountant / accountant123`.
 ## Features
 
 - **JWT login** with two roles: `ADMIN` manages students and fees; `ACCOUNTANT` records payments and views reports.
-- **Dashboard:** billed vs collected vs outstanding, money collected this month, overdue count, collection by class, recent payments.
-- **Students:** debounced search (RxJS `debounceTime` + `switchMap`), class filter, add student with validation.
-- **Fees and payments:** status per fee (`PENDING`, `PARTIAL`, `PAID`, `OVERDUE`), record payment, payment history.
-- **Overdue list:** oldest first, with days late, for parent follow-up.
+- **Dashboard (bento layout):** collected vs billed with an animated counter, 6-month collection trend (spline area chart), payment-mode donut, per-class progress rings, latest payments.
+- **Students:** debounced search (RxJS `debounceTime` + `switchMap`), class filter, grid/list view, add student, **bill a whole class in one go** (`POST /api/fees/bulk`).
+- **Collect payments** in a slide-in drawer: full/half quick amounts, payment mode, reference, date. A **printable receipt** (`RCPT-000123`, Print → Save as PDF) opens right after.
+- **Payments ledger:** search by student, admission no. or reference; filter by mode and date range; totals; **CSV export** for Excel.
+- **Overdue follow-up:** cards sorted oldest first, grouped by days late, **one-tap WhatsApp reminder** with a polite pre-filled message, CSV export.
+- **Ctrl/⌘ + K command palette**, **dark mode**, mobile bottom tab bar, and `prefers-reduced-motion` support.
 
 ## Design decisions (the interesting parts)
 
@@ -36,6 +40,7 @@ Log in as `admin / admin123` or `accountant / accountant123`.
 | N+1 queries | `join fetch` for overdue/recent lists; student balances come from one `GROUP BY` query. |
 | Schema changes | Flyway migrations (`V1__init_schema.sql`). Hibernate `ddl-auto` is off; the schema is versioned in Git. |
 | Consistent errors | `@RestControllerAdvice` returns one JSON shape: `status`, `message`, `fieldErrors`. |
+| Ledger date range | `from`/`to` are ISO dates, default to the last 12 months; `from > to` → **422**. One JPQL query with `join fetch`. |
 | Testable "today" | A `Clock` bean is injected instead of calling `LocalDate.now()` everywhere. |
 | Stateless security | No server session: `JwtAuthFilter` validates the Bearer token on each request; CSRF is off because no cookies are used. |
 
@@ -52,7 +57,9 @@ Log in as `admin / admin123` or `accountant / accountant123`.
 | POST | `/api/students/{id}/fees` | ADMIN |
 | DELETE | `/api/fees/{id}` (only if unpaid) | ADMIN |
 | GET | `/api/fees/overdue` | any |
+| POST | `/api/fees/bulk` (bill a whole class) | ADMIN |
 | GET / POST | `/api/fees/{id}/payments` | any |
+| GET | `/api/payments?q=&mode=&from=&to=` (ledger) | any |
 
 Example:
 
