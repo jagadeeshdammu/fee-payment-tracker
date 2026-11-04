@@ -54,7 +54,42 @@ class ApiIntegrationTest {
         mvc.perform(get("/api/dashboard").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.studentCount").value(8))
-                .andExpect(jsonPath("$.overdueCount").value(greaterThan(0)));
+                .andExpect(jsonPath("$.overdueCount").value(greaterThan(0)))
+                .andExpect(jsonPath("$.monthly.length()").value(6))
+                .andExpect(jsonPath("$.byMode.length()").value(greaterThan(0)))
+                .andExpect(jsonPath("$.recentPayments[0].receiptNo").exists());
+    }
+
+    @Test
+    void paymentLedgerFiltersByModeAndText() throws Exception {
+        String token = login("admin", "admin123");
+
+        mvc.perform(get("/api/payments").param("mode", "CASH").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(greaterThan(0)))
+                .andExpect(jsonPath("$[*].mode").value(org.hamcrest.Matchers.everyItem(org.hamcrest.Matchers.is("CASH"))));
+
+        mvc.perform(get("/api/payments").param("q", "Aarav").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].studentName").value(org.hamcrest.Matchers.everyItem(org.hamcrest.Matchers.is("Aarav Reddy"))));
+
+        mvc.perform(get("/api/payments").param("from", "2026-12-01").param("to", "2026-01-01")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    void adminCanBillAWholeClassButAccountantCannot() throws Exception {
+        String body = "{\"className\":\"Grade 5\",\"title\":\"Annual Day\",\"amount\":1500,\"dueDate\":\"2026-12-15\"}";
+
+        mvc.perform(post("/api/fees/bulk").header("Authorization", "Bearer " + login("accountant", "accountant123"))
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isForbidden());
+
+        mvc.perform(post("/api/fees/bulk").header("Authorization", "Bearer " + login("admin", "admin123"))
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.studentsBilled").value(2));
     }
 
     @Test
