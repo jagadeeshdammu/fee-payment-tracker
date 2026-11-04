@@ -1,5 +1,7 @@
 package com.jagadeesh.feetracker.service;
 
+import com.jagadeesh.feetracker.dto.BulkFeeRequest;
+import com.jagadeesh.feetracker.dto.BulkFeeResult;
 import com.jagadeesh.feetracker.dto.FeeRequest;
 import com.jagadeesh.feetracker.dto.FeeResponse;
 import com.jagadeesh.feetracker.dto.PaymentRequest;
@@ -8,6 +10,7 @@ import com.jagadeesh.feetracker.exception.ConflictException;
 import com.jagadeesh.feetracker.exception.NotFoundException;
 import com.jagadeesh.feetracker.model.Fee;
 import com.jagadeesh.feetracker.model.Payment;
+import com.jagadeesh.feetracker.model.PaymentMode;
 import com.jagadeesh.feetracker.model.Student;
 import com.jagadeesh.feetracker.repository.FeeRepository;
 import com.jagadeesh.feetracker.repository.PaymentRepository;
@@ -40,6 +43,34 @@ public class FeeService {
         Student student = students.findById(studentId).orElseThrow(() -> new NotFoundException("Student", studentId));
         Fee fee = fees.save(new Fee(student, req.title().trim(), req.amount(), req.dueDate()));
         return Mappers.toResponse(fee, today());
+    }
+
+    /** Bills every student in a class in one transaction - all fees are created, or none. */
+    @Transactional
+    public BulkFeeResult assignToClass(BulkFeeRequest req) {
+        String className = req.className().trim();
+        List<Student> classStudents = students.findByClassNameOrderByName(className);
+        if (classStudents.isEmpty()) {
+            throw new IllegalArgumentException("No students found in " + className);
+        }
+        List<Fee> created = classStudents.stream()
+                .map(s -> new Fee(s, req.title().trim(), req.amount(), req.dueDate()))
+                .toList();
+        fees.saveAll(created);
+        return new BulkFeeResult(className, req.title().trim(), created.size());
+    }
+
+    /** Payment ledger with optional search text, mode and date range (defaults: last 12 months). */
+    public List<PaymentResponse> searchPayments(String q, PaymentMode mode, LocalDate from, LocalDate to) {
+        LocalDate end = to != null ? to : today();
+        LocalDate start = from != null ? from : end.minusMonths(12);
+        if (start.isAfter(end)) {
+            throw new IllegalArgumentException("'from' must be on or before 'to'");
+        }
+        return payments.search(start, end, q == null ? "" : q.trim()).stream()
+                .filter(p -> mode == null || p.getMode() == mode)
+                .map(Mappers::toResponse)
+                .toList();
     }
 
     @Transactional
