@@ -72,13 +72,22 @@ public class DataSeeder implements CommandLineRunner {
             Student s = students.save(new Student(d[0], d[1], d[2], d[3], d[4]));
             BigDecimal tuition = new BigDecimal(d[2].endsWith("5") || d[2].endsWith("6") ? "42000" : "48000");
 
+            Fee admission = fees.save(new Fee(s, "Admission & Annual Charges", new BigDecimal("15000"), today.minusDays(150)));
+            Fee books = fees.save(new Fee(s, "Books & Uniform", new BigDecimal("8500"), today.minusDays(100)));
             Fee term1 = fees.save(new Fee(s, "Term 1 Tuition", tuition, today.minusDays(60)));
-            Fee term2 = fees.save(new Fee(s, "Term 2 Tuition", tuition, today.plusDays(25)));
+            Fee exam = fees.save(new Fee(s, "Mid-term Exam Fee", new BigDecimal("2500"), today.minusDays(30)));
             Fee transport = fees.save(new Fee(s, "Transport (Annual)", new BigDecimal("18000"), today.minusDays(10)));
+            Fee term2 = fees.save(new Fee(s, "Term 2 Tuition", tuition, today.plusDays(25)));
 
+            // Spread over ~6 months so the trend chart has history
+            pay(admission, new BigDecimal("15000"), PaymentMode.NET_BANKING, ref++, today.minusDays(165 - i * 3));
+            pay(books, i % 5 == 4 ? new BigDecimal("4000") : new BigDecimal("8500"), PaymentMode.UPI, ref++, today.minusDays(110 - i));
             // Term 1: most paid in full, two families paid half (-> overdue balance)
             BigDecimal t1 = i % 4 == 3 ? tuition.divide(BigDecimal.valueOf(2)) : tuition;
-            pay(term1, t1, i % 2 == 0 ? PaymentMode.UPI : PaymentMode.NET_BANKING, ref++, today.minusDays(62 - i));
+            pay(term1, t1, i % 2 == 0 ? PaymentMode.UPI : PaymentMode.CARD, ref++, today.minusDays(62 - i));
+            if (i % 3 != 2) {
+                pay(exam, new BigDecimal("2500"), i % 2 == 0 ? PaymentMode.UPI : PaymentMode.CASH, ref++, today.minusDays(34 - i));
+            }
             // Transport: some paid, some partial, some nothing (overdue)
             if (i % 3 == 0) {
                 pay(transport, new BigDecimal("18000"), PaymentMode.UPI, ref++, today.minusDays(12 - i % 5));
@@ -87,7 +96,7 @@ public class DataSeeder implements CommandLineRunner {
             }
             // Term 2: a few early payers this month
             if (i % 4 == 0) {
-                pay(term2, tuition.divide(BigDecimal.valueOf(2)), PaymentMode.CARD, ref++, today.minusDays(i % 3));
+                pay(term2, tuition.divide(BigDecimal.valueOf(2)), PaymentMode.CHEQUE, ref++, today.minusDays(i % 3));
             }
         }
         log.info("Seeded demo data: login admin/admin123 or accountant/accountant123");
